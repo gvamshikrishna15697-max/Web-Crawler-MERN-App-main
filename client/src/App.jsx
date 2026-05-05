@@ -400,6 +400,8 @@ function App() {
     () => buildPagePillItems({ page, totalPages }),
     [page, totalPages],
   );
+  const pageStart = total > 0 ? (page - 1) * limit + 1 : 0;
+  const pageEnd = total > 0 ? Math.min(total, page * limit) : 0;
 
   function goToPage(p) {
     const next = Math.max(1, Math.min(totalPages, Number(p) || 1));
@@ -649,7 +651,11 @@ function App() {
       <section className="tableWrap">
         <div className="tableHeader">
           <div className="muted">
-            {loading ? "Loading…" : `${total.toLocaleString()} results`}
+            {loading
+              ? "Loading…"
+              : total > 0
+                ? `Showing ${pageStart.toLocaleString()}–${pageEnd.toLocaleString()} of ${total.toLocaleString()} results`
+                : "0 results"}
           </div>
         </div>
 
