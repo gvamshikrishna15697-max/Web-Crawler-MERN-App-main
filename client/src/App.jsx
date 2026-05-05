@@ -142,6 +142,66 @@ function appliedToToApiIso(value) {
   return new Date(value).toISOString();
 }
 
+function buildPagePills({ page, totalPages }) {
+  const clamp = (n) => Math.max(1, Math.min(totalPages, n));
+  const uniqSorted = (arr) => [...new Set(arr)].sort((a, b) => a - b);
+  if (totalPages <= 1) return [];
+  if (totalPages <= 10) return uniqSorted(Array.from({ length: totalPages }, (_, i) => i + 1));
+
+  const first = [1, 2, 3, 4];
+  const last = [totalPages - 2, totalPages - 1, totalPages];
+  const mid = [clamp(page - 1), clamp(page), clamp(page + 1)].filter(
+    (p) => p >= 5 && p <= totalPages - 3,
+  );
+
+  const pages = uniqSorted([...first, ...mid, ...last]).filter(
+    (p) => p >= 1 && p <= totalPages,
+  );
+
+  /** @type {(number | \"…\")[]} */
+  const out = [];
+  for (let i = 0; i < pages.length; i += 1) {
+    const cur = pages[i];
+    const prev = pages[i - 1];
+    if (prev != null && cur - prev > 1) out.push("…");
+    out.push(cur);
+  }
+  return out;
+}
+
+function buildPagePillItems({ page, totalPages }) {
+  const pills = buildPagePills({ page, totalPages });
+  /** @type {{ type: 'page', page: number, key: string } | { type: 'dots', key: string }} */
+  const items = [];
+  let lastPage = null;
+  for (const p of pills) {
+    if (p === "…") {
+      items.push({ type: "dots", key: `dots-${lastPage ?? "start"}-${page}-${totalPages}` });
+      continue;
+    }
+    items.push({ type: "page", page: p, key: `page-${p}` });
+    lastPage = p;
+  }
+  return items;
+}
+
+function todayYmdLocal() {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+function yesterdayYmdLocal() {
+  const d = new Date();
+  d.setDate(d.getDate() - 1);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
 function buildArticleQuery(params) {
   const {
     q,
@@ -164,13 +224,38 @@ function buildArticleQuery(params) {
   return search.toString();
 }
 
+const THEME_KEY = "wc.theme";
+
+function getInitialTheme() {
+  if (typeof window === "undefined") return "light";
+  try {
+    const saved = window.localStorage.getItem(THEME_KEY);
+    if (saved === "light" || saved === "dark") return saved;
+  } catch {
+    // ignore storage errors (private mode etc.)
+  }
+  return "light";
+}
+
 function App() {
+  const [theme, setTheme] = useState(getInitialTheme);
+
+  useEffect(() => {
+    const root = document.documentElement;
+    root.setAttribute("data-theme", theme);
+    try {
+      window.localStorage.setItem(THEME_KEY, theme);
+    } catch {
+      // ignore
+    }
+  }, [theme]);
+
   const [q, setQ] = useState("");
   const [locale, setLocale] = useState("");
   const [source, setSource] = useState("");
   /** Draft date range (inputs only; no fetch until Apply). */
-  const [fromDraft, setFromDraft] = useState("");
-  const [toDraft, setToDraft] = useState("");
+  const [fromDraft, setFromDraft] = useState(() => yesterdayYmdLocal());
+  const [toDraft, setToDraft] = useState(() => todayYmdLocal());
   /** Applied date range (sent to API as pubDate filter). */
   const [fromApplied, setFromApplied] = useState("");
   const [toApplied, setToApplied] = useState("");
@@ -311,13 +396,114 @@ function App() {
   }
 
   const totalPages = Math.max(1, Math.ceil(total / limit));
+  const pagePillItems = useMemo(
+    () => buildPagePillItems({ page, totalPages }),
+    [page, totalPages],
+  );
+
+  function goToPage(p) {
+    const next = Math.max(1, Math.min(totalPages, Number(p) || 1));
+    setPage(next);
+  }
+
+  function renderPaginationBar({ compact = false } = {}) {
+    if (totalPages <= 1) return null;
+    return (
+      <div className={`pagerBar ${compact ? "compact" : ""}`}>
+        <button
+          className="pagerBtn"
+          disabled={page <= 1 || loading}
+          onClick={() => goToPage(page - 1)}
+        >
+          Prev
+        </button>
+
+        <div className="pagerPills" aria-label="Pagination">
+          {pagePillItems.map((it) =>
+            it.type === "dots" ? (
+              <span key={it.key} className="pagerDots" aria-hidden="true">
+                …
+              </span>
+            ) : (
+              <button
+                key={it.key}
+                type="button"
+                className={`pagerPill ${it.page === page ? "active" : ""}`}
+                disabled={loading || it.page === page}
+                onClick={() => goToPage(it.page)}
+              >
+                {it.page}
+              </button>
+            ),
+          )}
+        </div>
+
+        <button
+          className="pagerBtn"
+          disabled={page >= totalPages || loading}
+          onClick={() => goToPage(page + 1)}
+        >
+          Next
+        </button>
+
+        {!compact ? (
+          <div className="pagerText">
+            Page <b>{page}</b> / {totalPages}
+          </div>
+        ) : null}
+      </div>
+    );
+  }
 
   return (
     <div className="page">
       <header className="header">
         <div>
           <div className="titleRow">
-            <h1>Sarpa Crawler</h1>
+            <div className="brand">
+              <span className="brandLogo" aria-hidden="true">
+                <svg
+                  width="28"
+                  height="28"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    d="M7 7.5c0-2 2-3.5 5-3.5 2.8 0 5 .9 5 3 0 1.6-1.4 2.2-2.8 2.7-1.9.7-3.7 1.1-3.7 2.8 0 1.8 2 2.2 3.9 2.8 1.7.5 3.6 1.1 3.6 3 0 2.1-2.4 3.2-5.5 3.2-3.2 0-5.5-1.3-5.5-3.4"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                  <path
+                    d="M9.2 6.9h.01M10.6 6.9h.01"
+                    stroke="currentColor"
+                    strokeWidth="2.2"
+                    strokeLinecap="round"
+                  />
+                  <path
+                    d="M11.6 8.2c-.3.4-.7.7-1.2.7-.5 0-.9-.3-1.2-.7"
+                    stroke="currentColor"
+                    strokeWidth="1.6"
+                    strokeLinecap="round"
+                  />
+                </svg>
+              </span>
+              <h1 className="brandTitle">Sarpa Crawler</h1>
+            </div>
+            <button
+              type="button"
+              className="themeToggle"
+              onClick={() => setTheme((t) => (t === "dark" ? "light" : "dark"))}
+              aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} theme`}
+              title={`Switch to ${theme === "dark" ? "light" : "dark"} theme`}
+            >
+              <span className="themeToggleIcon" aria-hidden="true">
+                {theme === "dark" ? "☀" : "☾"}
+              </span>
+              <span>{theme === "dark" ? "Light" : "Dark"}</span>
+            </button>
           </div>
           <p className="subtitle">
             Google News RSS scraper with URL dedupe in MongoDB. Quick run uses “yesterday” only; pick dates below to fetch a range from Google.
@@ -458,24 +644,12 @@ function App() {
 
       {error ? <div className="error">{error}</div> : null}
 
+      {renderPaginationBar()}
+
       <section className="tableWrap">
         <div className="tableHeader">
           <div className="muted">
             {loading ? "Loading…" : `${total.toLocaleString()} results`}
-          </div>
-          <div className="pager">
-            <button disabled={page <= 1 || loading} onClick={() => setPage((p) => Math.max(1, p - 1))}>
-              Prev
-            </button>
-            <div className="pagerText">
-              Page <b>{page}</b> / {totalPages}
-            </div>
-            <button
-              disabled={page >= totalPages || loading}
-              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-            >
-              Next
-            </button>
           </div>
         </div>
 
@@ -526,6 +700,8 @@ function App() {
           </tbody>
         </table>
       </section>
+
+      {renderPaginationBar()}
 
       <footer className="footer">
         <div className="muted">Backend: <a href="/health" target="_blank" rel="noreferrer">/health</a></div>
