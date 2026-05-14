@@ -1,0 +1,12 @@
+{
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "https://web-crawler-mern-app.onrender.com/api/:path*"
+    },
+    {
+      "source": "/health",
+      "destination": "https://web-crawler-mern-app.onrender.com/health"
+    }
+  ]
+}
