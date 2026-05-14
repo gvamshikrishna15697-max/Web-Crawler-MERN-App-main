@@ -168,6 +168,31 @@ function buildExportTable(articles) {
   return html;
 }
 
+function exportXls(articles) {
+  const table = buildExportTable(articles);
+  const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office"
+xmlns:x="urn:schemas-microsoft-com:office:excel"
+xmlns="http://www.w3.org/TR/REC-html40">
+<head><meta charset="utf-8">
+<!--[if gte mso 9]><xml>
+<x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet>
+<x:Name>Articles</x:Name>
+<x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions>
+</x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook>
+</xml><![endif]-->
+<style>
+  table { border-collapse: collapse; }
+  th, td { border: 1px solid #ccc; padding: 6px 8px; font-size: 12px; }
+  th { background: #4f46e5; color: #fff; font-weight: bold; }
+</style></head><body>
+${table}
+</body></html>`;
+  downloadBlob(
+    new Blob([html], { type: "application/vnd.ms-excel" }),
+    exportFileName("xls"),
+  );
+}
+
 function exportPdf(articles) {
   const table = buildExportTable(articles);
   const html = `<!DOCTYPE html><html><head><meta charset="utf-8">
@@ -839,10 +864,20 @@ function App() {
               className="exportBtn"
               disabled={exporting || loading || total === 0}
               onClick={() => handleExport(exportCsv)}
-              title="Download as CSV (opens in Google Sheets / Excel)"
+              title="Download as CSV"
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-              CSV / Sheets
+              CSV
+            </button>
+            <button
+              type="button"
+              className="exportBtn exportBtnSheets"
+              disabled={exporting || loading || total === 0}
+              onClick={() => handleExport(exportXls)}
+              title="Download as Excel spreadsheet (.xls) — opens in Excel, LibreOffice, or upload to Google Sheets"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></svg>
+              Excel / Sheets
             </button>
             <button
               type="button"

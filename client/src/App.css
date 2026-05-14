@@ -415,6 +415,17 @@
   flex-shrink: 0;
 }
 
+.exportBtnSheets {
+  border-color: rgba(34, 154, 72, 0.4);
+  color: var(--text);
+}
+
+.exportBtnSheets:hover:not(:disabled) {
+  background: rgba(34, 154, 72, 0.10);
+  border-color: rgba(34, 154, 72, 0.55);
+  box-shadow: 0 1px 4px rgba(34, 154, 72, 0.12);
+}
+
 .table {
   width: 100%;
   border-collapse: collapse;
