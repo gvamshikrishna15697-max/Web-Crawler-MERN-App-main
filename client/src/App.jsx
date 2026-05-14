@@ -685,9 +685,7 @@ function App() {
               <span>{theme === "dark" ? "Light" : "Dark"}</span>
             </button>
           </div>
-          <p className="subtitle">
-            Google News RSS scraper with URL dedupe in MongoDB. Quick run uses “yesterday” only; pick dates below to fetch a range from Google.
-          </p>
+          
         </div>
 
         <div className="runCard">
