@@ -75,6 +75,24 @@ function loadPersistedJobSnapshots() {
 
 loadPersistedJobSnapshots();
 
+/** On startup, any job that was "running" in a previous process is dead — mark it so polling doesn't hang. */
+let needsPersistAfterCleanup = false;
+for (const [id, snap] of jobSnapshots) {
+  if (snap?.phase === "running") {
+    jobSnapshots.set(id, {
+      ...snap,
+      phase: "error",
+      error:
+        "Scrape interrupted (server restarted while this job was running). Try again.",
+      finishedAt: Date.now(),
+    });
+    needsPersistAfterCleanup = true;
+  }
+}
+if (needsPersistAfterCleanup) {
+  void persistJobSnapshotsToDisk();
+}
+
 function pruneJobSnapshots() {
   if (jobSnapshots.size <= 40) return;
   const keys = [...jobSnapshots.keys()].sort(
