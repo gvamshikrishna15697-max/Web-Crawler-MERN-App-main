@@ -7,6 +7,10 @@
     {
       "source": "/health",
       "destination": "https://web-crawler-mern-app.onrender.com/health"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
     }
   ]
 }
