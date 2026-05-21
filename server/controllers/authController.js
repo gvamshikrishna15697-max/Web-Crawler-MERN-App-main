@@ -25,10 +25,9 @@ export async function signup(req, res, next) {
     const username = String(body.username || "")
       .trim()
       .toLowerCase();
-    const email = String(body.email || "")
-      .trim()
-      .toLowerCase();
     const password = String(body.password || "");
+    const rawEmail = String(body.email || "").trim().toLowerCase();
+    const email = rawEmail || `${username}@users.internal`;
 
     if (!USERNAME_RE.test(username)) {
       return validationError(
@@ -36,7 +35,7 @@ export async function signup(req, res, next) {
         "Username must be 3–32 characters: lowercase letters, numbers, underscore.",
       );
     }
-    if (!EMAIL_RE.test(email)) {
+    if (rawEmail && !EMAIL_RE.test(rawEmail)) {
       return validationError(res, "A valid email address is required.");
     }
     if (password.length < 8) {
@@ -78,7 +77,7 @@ export async function login(req, res, next) {
     const password = String(body.password || "");
 
     if (!identifier || !password) {
-      return validationError(res, "Email/username and password are required.");
+      return validationError(res, "Username and password are required.");
     }
 
     const query = identifier.includes("@")
@@ -89,7 +88,7 @@ export async function login(req, res, next) {
     if (!user) {
       return res.status(401).json({
         error: "Unauthorized",
-        message: "Invalid email/username or password.",
+        message: "Invalid username or password.",
       });
     }
 
@@ -97,7 +96,7 @@ export async function login(req, res, next) {
     if (!ok) {
       return res.status(401).json({
         error: "Unauthorized",
-        message: "Invalid email/username or password.",
+        message: "Invalid username or password.",
       });
     }
 

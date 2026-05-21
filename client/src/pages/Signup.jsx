@@ -7,7 +7,6 @@ export default function Signup() {
   const navigate = useNavigate();
 
   const [username, setUsername] = useState("");
-  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState("");
@@ -22,7 +21,7 @@ export default function Signup() {
     setError("");
     setSubmitting(true);
     try {
-      await signup({ username, email, password });
+      await signup({ username, password });
       navigate("/", { replace: true });
     } catch (err) {
       setFormError(err?.message || "Signup failed.");
@@ -48,17 +47,6 @@ export default function Signup() {
               onChange={(e) => setUsername(e.target.value)}
               autoComplete="username"
               pattern="[a-z0-9_]{3,32}"
-              required
-            />
-          </label>
-          <label className="authLabel">
-            Email
-            <input
-              className="authInput"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              autoComplete="email"
               required
             />
           </label>

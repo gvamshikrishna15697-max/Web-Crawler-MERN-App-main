@@ -81,12 +81,12 @@ export function AuthProvider({ children }) {
   }, [refreshUser]);
 
   const signup = useCallback(
-    async ({ username, email, password }) => {
+    async ({ username, password }) => {
       setError("");
       const res = await apiFetch("/api/auth/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, email, password }),
+        body: JSON.stringify({ username, password }),
       });
       const data = await parseAuthResponse(res);
       persistSession(data.token, data.user);

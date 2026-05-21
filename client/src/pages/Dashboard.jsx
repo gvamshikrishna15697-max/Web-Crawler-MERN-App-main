@@ -908,7 +908,7 @@ function Dashboard() {
             </div>
             <div className="headerActions">
               {user ? (
-                <span className="userBadge" title={user.email}>
+                <span className="userBadge" title={user.username}>
                   {user.username}
                 </span>
               ) : null}

@@ -36,11 +36,11 @@ export default function Login() {
     <div className="authPage">
       <div className="authCard">
         <h1 className="authTitle">Sign in</h1>
-        <p className="authMuted">Use your email or username and password.</p>
+        <p className="authMuted">Use your username and password.</p>
 
         <form className="authForm" onSubmit={handleSubmit}>
           <label className="authLabel">
-            Email or username
+            Username
             <input
               className="authInput"
               value={identifier}
