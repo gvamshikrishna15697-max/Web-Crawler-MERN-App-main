@@ -1,0 +1,134 @@
+:root {
+  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Default = light (greyish). Explicit overrides via data-theme. */
+:root,
+:root[data-theme="light"] {
+  color-scheme: light;
+  color: var(--text);
+  background:
+    radial-gradient(1100px 520px at 12% -10%, #e7eaf0 0%, transparent 60%),
+    linear-gradient(180deg, #eef0f4 0%, #e6e8ee 100%);
+
+  --bg-app: #eaecf1;
+  --bg-card: #f5f6f9;
+  --bg-soft: #eef0f4;
+  --bg-input: #ffffff;
+  --bg-pill: rgba(15, 23, 42, 0.05);
+  --bg-row-hover: rgba(99, 102, 241, 0.05);
+  --border: rgba(15, 23, 42, 0.12);
+  --border-strong: rgba(15, 23, 42, 0.2);
+  --text: #1f2937;
+  --text-muted: #5b6472;
+  --placeholder: rgba(15, 23, 42, 0.42);
+  --primary-grad: linear-gradient(135deg, #6366f1, #8b5cf6);
+  --primary-grad-hover: linear-gradient(135deg, #4f46e5, #7c3aed);
+  --primary: #4f46e5;
+  --link: #4338ca;
+  --link-hover: #3730a3;
+  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.05);
+  --shadow-md: 0 6px 18px rgba(15, 23, 42, 0.07);
+
+  --pill-ok-bg: rgba(34, 197, 94, 0.14);
+  --pill-ok-border: rgba(22, 163, 74, 0.4);
+  --pill-ok-text: #166534;
+  --pill-warn-bg: rgba(245, 158, 11, 0.16);
+  --pill-warn-border: rgba(217, 119, 6, 0.4);
+  --pill-warn-text: #92400e;
+
+  --error-bg: rgba(239, 68, 68, 0.08);
+  --error-border: rgba(239, 68, 68, 0.35);
+  --error-text: #991b1b;
+
+  --calendar-icon-filter: invert(0.2);
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  color: var(--text);
+  background:
+    radial-gradient(1100px 520px at 12% -10%, #2c2f3a 0%, transparent 60%),
+    linear-gradient(180deg, #14161c 0%, #0d0f14 100%);
+
+  --bg-app: #14161c;
+  --bg-card: #1c1f27;
+  --bg-soft: #1a1d24;
+  --bg-input: #161922;
+  --bg-pill: rgba(255, 255, 255, 0.06);
+  --bg-row-hover: rgba(99, 102, 241, 0.12);
+  --border: rgba(255, 255, 255, 0.1);
+  --border-strong: rgba(255, 255, 255, 0.18);
+  --text: #e5e7eb;
+  --text-muted: #9ca3af;
+  --placeholder: rgba(229, 231, 235, 0.42);
+  --primary-grad: linear-gradient(135deg, #6366f1, #8b5cf6);
+  --primary-grad-hover: linear-gradient(135deg, #818cf8, #a78bfa);
+  --primary: #818cf8;
+  --link: #a5b4fc;
+  --link-hover: #c7d2fe;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.45);
+
+  --pill-ok-bg: rgba(34, 197, 94, 0.18);
+  --pill-ok-border: rgba(34, 197, 94, 0.45);
+  --pill-ok-text: #86efac;
+  --pill-warn-bg: rgba(245, 158, 11, 0.2);
+  --pill-warn-border: rgba(245, 158, 11, 0.45);
+  --pill-warn-text: #fcd34d;
+
+  --error-bg: rgba(239, 68, 68, 0.14);
+  --error-border: rgba(239, 68, 68, 0.45);
+  --error-text: #fca5a5;
+
+  --calendar-icon-filter: invert(0.85);
+}
+
+a {
+  font-weight: 500;
+  color: var(--link);
+  text-decoration: inherit;
+}
+a:hover {
+  color: var(--link-hover);
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  color: var(--text);
+}
+
+h1 {
+  margin: 0;
+  font-size: 1.7rem;
+  line-height: 1.2;
+}
+
+button {
+  border-radius: 8px;
+  border: 1px solid transparent;
+  padding: 0.6em 1.2em;
+  font-size: 1em;
+  font-weight: 500;
+  font-family: inherit;
+  background-color: var(--bg-card);
+  color: var(--text);
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s, color 0.2s;
+}
+button:hover {
+  border-color: var(--primary);
+}
+button:focus,
+button:focus-visible {
+  outline: 3px auto var(--primary);
+}

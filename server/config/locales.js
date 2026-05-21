@@ -1,0 +1,112 @@
+export const locales = [
+  // INDIA (Core Regional Matrix)
+  { name: "English (India)", param: "hl=en-IN&gl=IN&ceid=IN:en" },
+  { name: "Hindi", param: "hl=hi&gl=IN&ceid=IN:hi" },
+  { name: "Marathi", param: "hl=mr&gl=IN&ceid=IN:mr" },
+  { name: "Tamil", param: "hl=ta&gl=IN&ceid=IN:ta" },
+  { name: "Telugu", param: "hl=te&gl=IN&ceid=IN:te" },
+  { name: "Malayalam", param: "hl=ml&gl=IN&ceid=IN:ml" },
+  { name: "Kannada", param: "hl=kn&gl=IN&ceid=IN:kn" },
+  { name: "Bengali (India)", param: "hl=bn&gl=IN&ceid=IN:bn" },
+  { name: "Gujarati", param: "hl=gu&gl=IN&ceid=IN:gu" },
+  { name: "Punjabi", param: "hl=pa&gl=IN&ceid=IN:pa" },
+  { name: "Odia", param: "hl=or&gl=IN&ceid=IN:or" },
+  { name: "Urdu (India)", param: "hl=ur&gl=IN&ceid=IN:ur" },
+
+  // GLOBAL ENGLISH (The Syndication Net)
+  { name: "English (US)", param: "hl=en-US&gl=US&ceid=US:en" },
+  { name: "English (UK)", param: "hl=en-GB&gl=GB&ceid=GB:en" },
+  { name: "English (Canada)", param: "hl=en-CA&gl=CA&ceid=CA:en" },
+  { name: "English (Australia)", param: "hl=en-AU&gl=AU&ceid=AU:en" },
+  { name: "English (New Zealand)", param: "hl=en-NZ&gl=NZ&ceid=NZ:en" },
+  { name: "English (South Africa)", param: "hl=en-ZA&gl=ZA&ceid=ZA:en" },
+  { name: "English (Ireland)", param: "hl=en-IE&gl=IE&ceid=IE:en" },
+  { name: "English (Singapore)", param: "hl=en-SG&gl=SG&ceid=SG:en" },
+  { name: "English (Nigeria)", param: "hl=en-NG&gl=NG&ceid=NG:en" },
+  { name: "English (Kenya)", param: "hl=en-KE&gl=KE&ceid=KE:en" },
+
+  // EUROPE (Major & Regional)
+  { name: "French (France)", param: "hl=fr&gl=FR&ceid=FR:fr" },
+  { name: "French (Switzerland)", param: "hl=fr-CH&gl=CH&ceid=CH:fr" },
+  { name: "French (Belgium)", param: "hl=fr-BE&gl=BE&ceid=BE:fr" },
+  { name: "German (Germany)", param: "hl=de&gl=DE&ceid=DE:de" },
+  { name: "German (Austria)", param: "hl=de-AT&gl=AT&ceid=AT:de" },
+  { name: "German (Switzerland)", param: "hl=de-CH&gl=CH&ceid=CH:de" },
+  { name: "Spanish (Spain)", param: "hl=es&gl=ES&ceid=ES:es" },
+  { name: "Italian", param: "hl=it&gl=IT&ceid=IT:it" },
+  { name: "Dutch (Netherlands)", param: "hl=nl&gl=NL&ceid=NL:nl" },
+  { name: "Dutch (Belgium)", param: "hl=nl-BE&gl=BE&ceid=BE:nl" },
+  { name: "Portuguese (Portugal)", param: "hl=pt-PT&gl=PT&ceid=PT:pt-PT" },
+  { name: "Russian", param: "hl=ru&gl=RU&ceid=RU:ru" },
+  { name: "Ukrainian", param: "hl=uk&gl=UA&ceid=UA:uk" },
+  { name: "Polish", param: "hl=pl&gl=PL&ceid=PL:pl" },
+  { name: "Swedish", param: "hl=sv&gl=SE&ceid=SE:sv" },
+  { name: "Danish", param: "hl=da&gl=DK&ceid=DK:da" },
+  { name: "Norwegian", param: "hl=no&gl=NO&ceid=NO:no" },
+  { name: "Finnish", param: "hl=fi&gl=FI&ceid=FI:fi" },
+  { name: "Greek", param: "hl=el&gl=GR&ceid=GR:el" },
+  { name: "Czech", param: "hl=cs&gl=CZ&ceid=CZ:cs" },
+  { name: "Romanian", param: "hl=ro&gl=RO&ceid=RO:ro" },
+  { name: "Hungarian", param: "hl=hu&gl=HU&ceid=HU:hu" },
+  { name: "Bulgarian", param: "hl=bg&gl=BG&ceid=BG:bg" },
+  { name: "Slovak", param: "hl=sk&gl=SK&ceid=SK:sk" },
+  { name: "Croatian", param: "hl=hr&gl=HR&ceid=HR:hr" },
+  { name: "Serbian", param: "hl=sr&gl=RS&ceid=RS:sr" },
+  { name: "Lithuanian", param: "hl=lt&gl=LT&ceid=LT:lt" },
+  { name: "Latvian", param: "hl=lv&gl=LV&ceid=LV:lv" },
+  { name: "Estonian", param: "hl=et&gl=EE&ceid=EE:et" },
+
+  // LATIN AMERICA (The Spanish/Portuguese Net)
+  { name: "Spanish (Mexico)", param: "hl=es-419&gl=MX&ceid=MX:es-419" },
+  {
+    name: "Spanish (Argentina)",
+    param: "hl=es-419&gl=AR&ceid=AR:es-419",
+  },
+  {
+    name: "Spanish (Colombia)",
+    param: "hl=es-419&gl=CO&ceid=CO:es-419",
+  },
+  { name: "Spanish (Chile)", param: "hl=es-419&gl=CL&ceid=CL:es-419" },
+  { name: "Spanish (Peru)", param: "hl=es-419&gl=PE&ceid=PE:es-419" },
+  {
+    name: "Spanish (Venezuela)",
+    param: "hl=es-419&gl=VE&ceid=VE:es-419",
+  },
+  { name: "Portuguese (Brazil)", param: "hl=pt-BR&gl=BR&ceid=BR:pt-BR" },
+
+  // MIDDLE EAST & NORTH AFRICA
+  { name: "Arabic (UAE)", param: "hl=ar&gl=AE&ceid=AE:ar" },
+  {
+    name: "Arabic (Saudi Arabia)",
+    param: "hl=ar&gl=SA&ceid=SA:ar",
+  },
+  { name: "Arabic (Egypt)", param: "hl=ar&gl=EG&ceid=EG:ar" },
+  { name: "Arabic (Lebanon)", param: "hl=ar&gl=LB&ceid=LB:ar" },
+  { name: "Hebrew (Israel)", param: "hl=he&gl=IL&ceid=IL:he" },
+  { name: "Turkish", param: "hl=tr&gl=TR&ceid=TR:tr" },
+  { name: "Persian (Iran)", param: "hl=fa&gl=IR&ceid=IR:fa" },
+  { name: "French (Morocco)", param: "hl=fr&gl=MA&ceid=MA:fr" },
+
+  // ASIA-PACIFIC (Major & Regional)
+  {
+    name: "Chinese (Simplified - China)",
+    param: "hl=zh-CN&gl=CN&ceid=CN:zh-CN",
+  },
+  {
+    name: "Chinese (Traditional - Taiwan)",
+    param: "hl=zh-TW&gl=TW&ceid=TW:zh-TW",
+  },
+  {
+    name: "Chinese (Traditional - Hong Kong)",
+    param: "hl=zh-HK&gl=HK&ceid=HK:zh-HK",
+  },
+  { name: "Japanese", param: "hl=ja&gl=JP&ceid=JP:ja" },
+  { name: "Korean", param: "hl=ko&gl=KR&ceid=KR:ko" },
+  { name: "Indonesian", param: "hl=id&gl=ID&ceid=ID:id" },
+  { name: "Vietnamese", param: "hl=vi&gl=VN&ceid=VN:vi" },
+  { name: "Thai", param: "hl=th&gl=TH&ceid=TH:th" },
+  { name: "Malay (Malaysia)", param: "hl=ms&gl=MY&ceid=MY:ms" },
+  { name: "Tagalog (Philippines)", param: "hl=en-PH&gl=PH&ceid=PH:en" },
+  { name: "Bengali (Bangladesh)", param: "hl=bn&gl=BD&ceid=BD:bn" },
+];
+

@@ -1,0 +1,19 @@
+{
+  "name": "sarpa-crawler",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "dev": "concurrently -n server,client -c blue,green \"npm:dev:server\" \"npm:dev:client\"",
+    "dev:server": "npm --prefix server run dev",
+    "dev:client": "npm --prefix client run dev",
+    "build": "npm --prefix client run build",
+    "start": "npm --prefix server start"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "Sarpa Crawler — Google News RSS scraper with MongoDB",
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  }
+}
