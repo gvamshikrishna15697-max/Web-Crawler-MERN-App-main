@@ -1,0 +1,12 @@
+# Render Blueprint — backend API (Node)
+# https://render.com/docs/blueprint-spec
+services:
+  - type: web
+    name: web-crawler-mern-app
+    runtime: node
+    rootDir: server
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_VERSION
+        value: "20"

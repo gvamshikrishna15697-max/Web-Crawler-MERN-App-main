@@ -1,4 +1,7 @@
 {
+  "installCommand": "cd client && npm install",
+  "buildCommand": "cd client && npm run build",
+  "outputDirectory": "client/dist",
   "rewrites": [
     {
       "source": "/api/:path*",
@@ -9,7 +12,7 @@
       "destination": "https://web-crawler-mern-app.onrender.com/health"
     },
     {
-      "source": "/((?!assets/).*)",
+      "source": "/(.*)",
       "destination": "/index.html"
     }
   ]
