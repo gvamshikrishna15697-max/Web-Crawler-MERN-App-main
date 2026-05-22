@@ -177,32 +177,44 @@ ${table}
 </body></html>`;
 }
 
-/** Print HTML without pop-ups (hidden iframe in the same page). */
-function printHtmlViaIframe(html) {
-  let iframe = document.getElementById("sarpa-print-frame");
-  if (!iframe) {
-    iframe = document.createElement("iframe");
-    iframe.id = "sarpa-print-frame";
-    iframe.setAttribute(
-      "style",
-      "position:fixed;left:0;top:0;width:0;height:0;border:0;visibility:hidden",
-    );
-    iframe.setAttribute("title", "Print frame");
-    document.body.appendChild(iframe);
-  }
+/**
+ * Print HTML without pop-ups (hidden iframe). Optional onDone runs after the print
+ * dialog closes (afterprint), so multiple articles can print one-by-one.
+ */
+function printHtmlViaIframe(html, { onDone } = {}) {
+  const iframe = document.createElement("iframe");
+  iframe.setAttribute(
+    "style",
+    "position:fixed;left:0;top:0;width:0;height:0;border:0;visibility:hidden",
+  );
+  iframe.setAttribute("title", "Print frame");
+  document.body.appendChild(iframe);
+
   const win = iframe.contentWindow;
   const doc = win.document;
   doc.open();
   doc.write(html);
   doc.close();
+
+  let doneCalled = false;
+  const finish = () => {
+    if (doneCalled) return;
+    doneCalled = true;
+    iframe.remove();
+    onDone?.();
+  };
+
   const runPrint = () => {
     try {
+      win.addEventListener("afterprint", finish, { once: true });
+      setTimeout(finish, 4000);
       win.focus();
       win.print();
     } catch {
-      // ignore — file download still succeeded
+      finish();
     }
   };
+
   if (doc.readyState === "complete") {
     setTimeout(runPrint, 350);
   } else {
@@ -253,6 +265,10 @@ function buildArticleDetailCards(articles) {
     .join("\n");
 }
 
+function buildOneArticlePrintHtml(article) {
+  return buildSingleArticlePrintHtml([article]);
+}
+
 function buildSingleArticlePrintHtml(articles) {
   const cards = buildArticleDetailCards(articles);
   const label =
@@ -301,25 +317,47 @@ const PDF_READY_NOTICE =
  */
 function exportArticlePdf(article, { index } = {}) {
   if (!article) return { ok: false };
-  const html = buildSingleArticlePrintHtml([article]);
+  const html = buildOneArticlePrintHtml(article);
   const filename = `${safeFilenameFromTitle(article.title, index)}.html`;
   downloadBlob(new Blob([html], { type: "text/html;charset=utf-8" }), filename);
   printHtmlViaIframe(html);
   return { ok: true };
 }
 
-/** Multiple articles: one HTML file per article (staggered so the browser allows each download). */
+/**
+ * Multiple articles: one HTML download per article, then one print dialog per article
+ * (sequential) so each can be saved as its own PDF.
+ */
 function exportSelectedArticlesPdfSeparate(articles) {
   if (!articles.length) return { ok: false };
-  const staggerMs = 450;
-  articles.forEach((article, index) => {
+
+  const exports = articles.map((article, index) => ({
+    html: buildOneArticlePrintHtml(article),
+    filename: `${safeFilenameFromTitle(article.title, index)}.html`,
+  }));
+
+  const downloadStaggerMs = 700;
+  exports.forEach(({ html, filename }, index) => {
     setTimeout(() => {
-      const html = buildSingleArticlePrintHtml([article]);
-      const filename = `${safeFilenameFromTitle(article.title, index)}.html`;
       downloadBlob(new Blob([html], { type: "text/html;charset=utf-8" }), filename);
-      if (index === 0) printHtmlViaIframe(html);
-    }, index * staggerMs);
+    }, index * downloadStaggerMs);
   });
+
+  let printIndex = 0;
+  const printNext = () => {
+    if (printIndex >= exports.length) return;
+    const { html } = exports[printIndex];
+    printIndex += 1;
+    printHtmlViaIframe(html, {
+      onDone: () => {
+        if (printIndex < exports.length) {
+          setTimeout(printNext, 500);
+        }
+      },
+    });
+  };
+  printNext();
+
   return { ok: true };
 }
 
@@ -740,7 +778,7 @@ function Dashboard() {
     setNotice(
       list.length === 1
         ? PDF_READY_NOTICE
-        : `${list.length} separate HTML files downloaded (one per article). ${PDF_READY_NOTICE}`,
+        : `${list.length} articles: the print dialog opens once per article — save each as its own PDF. Separate .html files are also downloading.`,
     );
   }
 
