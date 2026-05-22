@@ -308,16 +308,18 @@ function exportArticlePdf(article, { index } = {}) {
   return { ok: true };
 }
 
-/** Multiple articles: one combined HTML file + one print dialog. */
-function exportSelectedArticlesPdfCombined(articles) {
+/** Multiple articles: one HTML file per article (staggered so the browser allows each download). */
+function exportSelectedArticlesPdfSeparate(articles) {
   if (!articles.length) return { ok: false };
-  const html = buildSingleArticlePrintHtml(articles);
-  const filename =
-    articles.length === 1
-      ? `${safeFilenameFromTitle(articles[0].title)}.html`
-      : `sarpa-${articles.length}-articles.html`;
-  downloadBlob(new Blob([html], { type: "text/html;charset=utf-8" }), filename);
-  printHtmlViaIframe(html);
+  const staggerMs = 450;
+  articles.forEach((article, index) => {
+    setTimeout(() => {
+      const html = buildSingleArticlePrintHtml([article]);
+      const filename = `${safeFilenameFromTitle(article.title, index)}.html`;
+      downloadBlob(new Blob([html], { type: "text/html;charset=utf-8" }), filename);
+      if (index === 0) printHtmlViaIframe(html);
+    }, index * staggerMs);
+  });
   return { ok: true };
 }
 
@@ -729,7 +731,7 @@ function Dashboard() {
     const result =
       list.length === 1
         ? exportArticlePdf(list[0])
-        : exportSelectedArticlesPdfCombined(list);
+        : exportSelectedArticlesPdfSeparate(list);
     if (!result.ok) {
       setNotice("");
       setError("Could not export PDF for the selected articles.");
@@ -738,7 +740,7 @@ function Dashboard() {
     setNotice(
       list.length === 1
         ? PDF_READY_NOTICE
-        : `${list.length} articles in one file. ${PDF_READY_NOTICE}`,
+        : `${list.length} separate HTML files downloaded (one per article). ${PDF_READY_NOTICE}`,
     );
   }
 
@@ -1110,7 +1112,9 @@ function Dashboard() {
               onClick={handlePdfToolbarClick}
               title={
                 selectedCount > 0
-                  ? `Export ${selectedCount} selected article(s) as PDF (HTML download + print dialog)`
+                  ? selectedCount === 1
+                    ? "Export selected article as PDF (HTML download + print dialog)"
+                    : `Export ${selectedCount} selected articles as separate PDFs (one HTML file each)`
                   : "Export all filtered articles as PDF (HTML download + print dialog)"
               }
             >
