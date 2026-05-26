@@ -2,10 +2,10 @@ import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.jsx";
 
 export default function ProtectedRoute({ children }) {
-  const { isAuthenticated, loading } = useAuth();
+  const { isAuthenticated, loading, token, user } = useAuth();
   const location = useLocation();
 
-  if (loading) {
+  if (loading && !(token && user)) {
     return (
       <div className="authPage">
         <div className="authCard">

@@ -4,16 +4,26 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import {
   apiFetch,
   clearStoredToken,
+  clearStoredUser,
   getStoredToken,
+  getStoredUser,
+  isTokenExpired,
   setStoredToken,
+  setStoredUser,
 } from "../api/client.js";
 
 const AuthContext = createContext(null);
+const AUTH_ME_RETRIES = 2;
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 async function parseAuthResponse(res) {
   const data = await res.json().catch(() => ({}));
@@ -29,59 +39,129 @@ async function parseAuthResponse(res) {
   return data;
 }
 
+function readInitialAuth() {
+  const stored = getStoredToken();
+  if (!stored || isTokenExpired(stored)) {
+    if (stored) {
+      clearStoredToken();
+      clearStoredUser();
+    }
+    return { token: "", user: null, loading: false };
+  }
+  const cachedUser = getStoredUser();
+  return {
+    token: stored,
+    user: cachedUser,
+    loading: !cachedUser,
+  };
+}
+
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);
-  const [token, setToken] = useState(() => getStoredToken());
-  const [loading, setLoading] = useState(Boolean(getStoredToken()));
+  const initial = useMemo(() => readInitialAuth(), []);
+  const [user, setUser] = useState(initial.user);
+  const [token, setToken] = useState(initial.token);
+  const [loading, setLoading] = useState(initial.loading);
   const [error, setError] = useState("");
+  const refreshGenRef = useRef(0);
+  const refreshAbortRef = useRef(null);
 
   const persistSession = useCallback((nextToken, nextUser) => {
     setStoredToken(nextToken);
+    setStoredUser(nextUser);
     setToken(nextToken);
     setUser(nextUser);
     setError("");
+    setLoading(false);
   }, []);
 
   const clearSession = useCallback(() => {
     clearStoredToken();
+    clearStoredUser();
     setToken("");
     setUser(null);
     setError("");
+    setLoading(false);
   }, []);
 
-  const refreshUser = useCallback(async () => {
-    const stored = getStoredToken();
-    if (!stored) {
-      clearSession();
-      setLoading(false);
-      return null;
-    }
-    setLoading(true);
-    try {
-      const res = await apiFetch("/api/auth/me");
-      const data = await parseAuthResponse(res);
-      setToken(stored);
-      setUser(data.user);
-      setError("");
-      return data.user;
-    } catch {
-      clearSession();
-      return null;
-    } finally {
-      setLoading(false);
-    }
-  }, [clearSession]);
+  const cancelRefresh = useCallback(() => {
+    refreshGenRef.current += 1;
+    refreshAbortRef.current?.abort();
+    refreshAbortRef.current = null;
+  }, []);
+
+  const refreshUser = useCallback(
+    async ({ silent = false } = {}) => {
+      const stored = getStoredToken();
+      if (!stored || isTokenExpired(stored)) {
+        clearSession();
+        return null;
+      }
+
+      cancelRefresh();
+      const gen = refreshGenRef.current;
+      const controller = new AbortController();
+      refreshAbortRef.current = controller;
+
+      if (!silent) setLoading(true);
+
+      try {
+        for (let attempt = 0; attempt <= AUTH_ME_RETRIES; attempt += 1) {
+          if (gen !== refreshGenRef.current) return null;
+
+          const res = await apiFetch("/api/auth/me", {
+            signal: controller.signal,
+          });
+
+          if (gen !== refreshGenRef.current) return null;
+
+          if (res.status === 503 && attempt < AUTH_ME_RETRIES) {
+            await sleep(600 * (attempt + 1));
+            continue;
+          }
+
+          const data = await parseAuthResponse(res);
+          setToken(stored);
+          setUser(data.user);
+          setStoredUser(data.user);
+          setError("");
+          return data.user;
+        }
+        clearSession();
+        return null;
+      } catch (err) {
+        if (gen !== refreshGenRef.current || err?.name === "AbortError") {
+          return null;
+        }
+        clearSession();
+        return null;
+      } finally {
+        if (gen === refreshGenRef.current) {
+          refreshAbortRef.current = null;
+          if (!silent) setLoading(false);
+        }
+      }
+    },
+    [cancelRefresh, clearSession],
+  );
 
   useEffect(() => {
-    if (getStoredToken()) {
-      void refreshUser();
-    } else {
-      setLoading(false);
+    const stored = getStoredToken();
+    if (!stored) return;
+    if (isTokenExpired(stored)) {
+      clearSession();
+      return;
     }
-  }, [refreshUser]);
+    if (getStoredUser()) {
+      void refreshUser({ silent: true });
+    } else {
+      void refreshUser();
+    }
+    return () => cancelRefresh();
+  }, [refreshUser, clearSession, cancelRefresh]);
 
   const signup = useCallback(
     async ({ username, password }) => {
+      cancelRefresh();
       setError("");
       const res = await apiFetch("/api/auth/signup", {
         method: "POST",
@@ -92,12 +172,14 @@ export function AuthProvider({ children }) {
       persistSession(data.token, data.user);
       return data.user;
     },
-    [persistSession],
+    [persistSession, cancelRefresh],
   );
 
   const login = useCallback(
     async ({ identifier, password }) => {
+      cancelRefresh();
       setError("");
+      setLoading(false);
       const res = await apiFetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -107,10 +189,11 @@ export function AuthProvider({ children }) {
       persistSession(data.token, data.user);
       return data.user;
     },
-    [persistSession],
+    [persistSession, cancelRefresh],
   );
 
   const logout = useCallback(async () => {
+    cancelRefresh();
     try {
       if (getStoredToken()) {
         await apiFetch("/api/auth/logout", { method: "POST" });
@@ -120,7 +203,7 @@ export function AuthProvider({ children }) {
     } finally {
       clearSession();
     }
-  }, [clearSession]);
+  }, [clearSession, cancelRefresh]);
 
   const value = useMemo(
     () => ({
@@ -129,7 +212,7 @@ export function AuthProvider({ children }) {
       loading,
       error,
       setError,
-      isAuthenticated: Boolean(token && user),
+      isAuthenticated: Boolean(token && user && !isTokenExpired(token)),
       signup,
       login,
       logout,

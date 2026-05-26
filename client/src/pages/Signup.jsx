@@ -11,7 +11,17 @@ export default function Signup() {
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState("");
 
-  if (!loading && isAuthenticated) {
+  if (loading) {
+    return (
+      <div className="authPage">
+        <div className="authCard">
+          <p className="authMuted">Checking session…</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (isAuthenticated) {
     return <Navigate to="/" replace />;
   }
 
