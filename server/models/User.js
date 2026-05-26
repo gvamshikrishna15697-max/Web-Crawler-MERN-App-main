@@ -25,6 +25,15 @@ const userSchema = new mongoose.Schema(
       required: true,
       select: false,
     },
+    isActive: {
+      type: Boolean,
+      default: true,
+      index: true,
+    },
+    lastLoginAt: {
+      type: Date,
+      default: null,
+    },
   },
   { timestamps: true },
 );

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
+import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.jsx";
 
 export default function Login() {
@@ -46,7 +46,9 @@ export default function Login() {
     <div className="authPage">
       <div className="authCard">
         <h1 className="authTitle">Sign in</h1>
-        <p className="authMuted">Use your username and password.</p>
+        <p className="authMuted">
+          Sign in with the username and password provided by your administrator.
+        </p>
 
         <form className="authForm" onSubmit={handleSubmit}>
           <label className="authLabel">
@@ -79,9 +81,6 @@ export default function Login() {
           </button>
         </form>
 
-        <p className="authFooter">
-          No account? <Link to="/signup">Create one</Link>
-        </p>
       </div>
     </div>
   );

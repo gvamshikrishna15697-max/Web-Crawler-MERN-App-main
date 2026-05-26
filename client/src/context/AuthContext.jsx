@@ -159,22 +159,6 @@ export function AuthProvider({ children }) {
     return () => cancelRefresh();
   }, [refreshUser, clearSession, cancelRefresh]);
 
-  const signup = useCallback(
-    async ({ username, password }) => {
-      cancelRefresh();
-      setError("");
-      const res = await apiFetch("/api/auth/signup", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, password }),
-      });
-      const data = await parseAuthResponse(res);
-      persistSession(data.token, data.user);
-      return data.user;
-    },
-    [persistSession, cancelRefresh],
-  );
-
   const login = useCallback(
     async ({ identifier, password }) => {
       cancelRefresh();
@@ -213,12 +197,11 @@ export function AuthProvider({ children }) {
       error,
       setError,
       isAuthenticated: Boolean(token && user && !isTokenExpired(token)),
-      signup,
       login,
       logout,
       refreshUser,
     }),
-    [user, token, loading, error, signup, login, logout, refreshUser],
+    [user, token, loading, error, login, logout, refreshUser],
   );
 
   return (

@@ -1,11 +1,12 @@
 import express from "express";
 import rateLimit from "express-rate-limit";
 import {
+  createUserAdmin,
   login,
   logout,
   me,
-  signup,
 } from "../controllers/authController.js";
+import { requireAdminToken } from "../middleware/adminAuth.js";
 import { requireAuth } from "../middleware/auth.js";
 
 const router = express.Router();
@@ -21,9 +22,10 @@ const authLimiter = rateLimit({
   },
 });
 
-router.post("/signup", authLimiter, signup);
 router.post("/login", authLimiter, login);
 router.post("/logout", requireAuth, logout);
 router.get("/me", requireAuth, me);
+/** Create users manually — requires ADMIN_TOKEN (not exposed in the public UI). */
+router.post("/admin/users", authLimiter, requireAdminToken, createUserAdmin);
 
 export default router;
