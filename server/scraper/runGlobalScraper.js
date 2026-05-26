@@ -5,19 +5,27 @@ import Article from "../models/Article.js";
 import { locales } from "../config/locales.js";
 import { blockedPublishers } from "../config/blockedPublishers.js";
 import {
+  getScrapeQueries,
+  matchesTopic,
+} from "../config/scrapeKeywords.js";
+import {
   findPublication,
   normalizePublisherName,
 } from "../config/publications.js";
+import {
+  addDays,
+  getScrapeTimezone,
+  googleAfterBefore,
+  startOfTodayInScrapeTz,
+  ymdInTimeZone,
+} from "../utils/scrapeDates.js";
 
 const MS_PER_DAY = 86400000;
+const FETCH_CONCURRENCY = Math.min(
+  12,
+  Math.max(2, Number(process.env.SCRAPE_FETCH_CONCURRENCY) || 6),
+);
 
-function startOfTodayLocal() {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  return today;
-}
-
-/** Pick Google News `when:` tier from how far back rangeStart is from now (approximate lookback). */
 function computeWhenForLookback(rangeStartDate) {
   const start = rangeStartDate.getTime();
   const lookbackDays = Math.max(
@@ -62,8 +70,9 @@ async function fetchRss(url, { timeoutMs, retries }) {
         timeout: timeoutMs,
         headers: {
           "User-Agent":
-            "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36",
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
           Accept: "application/rss+xml, application/xml;q=0.9, */*;q=0.8",
+          "Accept-Language": "en-US,en;q=0.9",
         },
       });
     } catch (err) {
@@ -82,22 +91,55 @@ function parseDateInput(value) {
   return d;
 }
 
+function buildGoogleNewsQuery(keywordPhrase, { whenUsed, rangeFrom, rangeTo, rangeMode }) {
+  const parts = [keywordPhrase.trim()];
+  if (rangeMode && rangeFrom && rangeTo) {
+    const { after, before } = googleAfterBefore(rangeFrom, rangeTo);
+    parts.push(`after:${after}`, `before:${before}`);
+  } else if (whenUsed) {
+    parts.push(`when:${whenUsed}`);
+  }
+  return parts.join(" ");
+}
+
+async function mapPool(items, worker, concurrency) {
+  const results = [];
+  let index = 0;
+
+  async function runWorker() {
+    while (index < items.length) {
+      const i = index;
+      index += 1;
+      results[i] = await worker(items[i], i);
+    }
+  }
+
+  const workers = Array.from(
+    { length: Math.min(concurrency, items.length) },
+    () => runWorker(),
+  );
+  await Promise.all(workers);
+  return results;
+}
+
 export async function runGlobalScraper({
-  keywords = '"Sadhguru" OR "Jaggi Vasudev" OR "Isha Foundation"',
   when: whenOverride,
   rangeFrom: rangeFromInput,
   rangeTo: rangeToInput,
-  timeoutMs = 15_000,
-  retries = 1,
+  timeoutMs = 20_000,
+  retries = 2,
+  /** yesterday | today | both — default window when not using an explicit range */
+  defaultWindow = process.env.SCRAPE_DEFAULT_WINDOW || "both",
 } = {}) {
   const parser = new XMLParser({
     ignoreAttributes: false,
     attributeNamePrefix: "@_",
   });
 
-  const today = startOfTodayLocal();
-  const yesterday = new Date(today);
-  yesterday.setDate(yesterday.getDate() - 1);
+  const tz = getScrapeTimezone();
+  const today = startOfTodayInScrapeTz();
+  const yesterday = addDays(today, -1);
+  const tomorrow = addDays(today, 1);
 
   const rf = parseDateInput(rangeFromInput);
   const rt = parseDateInput(rangeToInput);
@@ -107,25 +149,33 @@ export async function runGlobalScraper({
   if (rangeMode) {
     whenUsed = whenOverride ?? computeWhenForLookback(rf);
   } else {
-    whenUsed = whenOverride ?? "2d";
+    whenUsed = whenOverride ?? "7d";
   }
 
-  const encodedQuery = encodeURIComponent(`${keywords} when:${whenUsed}`);
+  const keywordQueries = getScrapeQueries();
+  const seenUrls = new Set();
 
   const stats = {
-    mode: rangeMode ? "range" : "yesterday",
+    mode: rangeMode ? "range" : defaultWindow,
+    timeZone: tz,
     whenUsed,
+    keywordQueries,
     startedAt: new Date().toISOString(),
     today: today.toISOString(),
     yesterday: yesterday.toISOString(),
     localesTotal: locales.length,
+    queriesPerLocale: keywordQueries.length,
     localesSucceeded: 0,
     localesFailed: 0,
+    fetchTasksTotal: locales.length * keywordQueries.length,
+    fetchTasksSucceeded: 0,
+    fetchTasksFailed: 0,
     fetchedItems: 0,
     acceptedItems: 0,
     upserted: 0,
     enriched: 0,
     skippedLocales: [],
+    duplicateUrlsSkipped: 0,
     unknownPublishers: [],
   };
   const unknownPublishersSet = new Set();
@@ -133,88 +183,129 @@ export async function runGlobalScraper({
   if (rangeMode) {
     stats.rangeFrom = rf.toISOString();
     stats.rangeTo = rt.toISOString();
+    stats.rangeFromLocal = ymdInTimeZone(rf, tz);
+    stats.rangeToLocal = ymdInTimeZone(addDays(rt, -1), tz);
   }
 
   function passesDateFilter(articleDate) {
     if (rangeMode) {
       return articleDate >= rf && articleDate < rt;
     }
-    return articleDate >= yesterday && articleDate < today;
+    const win = String(defaultWindow).toLowerCase();
+    if (win === "today") {
+      return articleDate >= today && articleDate < tomorrow;
+    }
+    if (win === "yesterday") {
+      return articleDate >= yesterday && articleDate < today;
+    }
+    return articleDate >= yesterday && articleDate < tomorrow;
   }
 
+  const fetchTasks = [];
   for (const locale of locales) {
-    const url = `https://news.google.com/rss/search?q=${encodedQuery}&${locale.param}`;
-
-    try {
-      const resp = await fetchRss(url, { timeoutMs, retries });
-
-      const parsed = parser.parse(resp.data);
-      const items = normalizeItems(parsed);
-      stats.localesSucceeded += 1;
-      stats.fetchedItems += items.length;
-
-      const ops = [];
-
-      for (const item of items) {
-        const pubDateText = item?.pubDate ? String(item.pubDate) : "";
-        const articleDate = pubDateText ? new Date(pubDateText) : null;
-        if (!articleDate || Number.isNaN(articleDate.getTime())) continue;
-
-        const sourceText = normalizeItemSource(item);
-        if (isBlockedSource(sourceText)) continue;
-
-        if (!passesDateFilter(articleDate)) continue;
-
-        const title = item?.title ? String(item.title) : "";
-        const link = item?.link ? String(item.link) : "";
-        if (!title || !link) continue;
-
-        const pubMatch = findPublication(sourceText);
-        const publisherKey = normalizePublisherName(sourceText);
-        if (pubMatch) {
-          stats.enriched += 1;
-        } else if (sourceText) {
-          unknownPublishersSet.add(sourceText);
-        }
-
-        stats.acceptedItems += 1;
-        ops.push({
-          updateOne: {
-            filter: { url: link },
-            update: {
-              $setOnInsert: {
-                title,
-                source: sourceText || "Unknown",
-                locale: locale.name,
-                url: link,
-                pubDate: articleDate,
-                pubDateText,
-              },
-              $set: {
-                publisherKey,
-                country: pubMatch?.country || "",
-                language: pubMatch?.language || "",
-                category: pubMatch?.category || "",
-              },
-            },
-            upsert: true,
-          },
-        });
-      }
-
-      if (ops.length) {
-        const result = await Article.bulkWrite(ops, { ordered: false });
-        stats.upserted += result.upsertedCount ?? 0;
-      }
-    } catch (err) {
-      stats.localesFailed += 1;
-      stats.skippedLocales.push(locale.name);
-      // eslint-disable-next-line no-console
-      console.log(`Skipped locale: ${locale.name}`, err?.message || err);
+    for (const keywordPhrase of keywordQueries) {
+      fetchTasks.push({ locale, keywordPhrase });
     }
   }
 
-  // Limit the sample so this never bloats ScrapeRun.stats stored in Mongo.
+  await mapPool(
+    fetchTasks,
+    async ({ locale, keywordPhrase }) => {
+      const googleQ = buildGoogleNewsQuery(keywordPhrase, {
+        whenUsed: rangeMode ? null : whenUsed,
+        rangeFrom: rf,
+        rangeTo: rt,
+        rangeMode,
+      });
+      const url = `https://news.google.com/rss/search?q=${encodeURIComponent(googleQ)}&${locale.param}`;
+
+      try {
+        const resp = await fetchRss(url, { timeoutMs, retries });
+        const parsed = parser.parse(resp.data);
+        const items = normalizeItems(parsed);
+        stats.fetchTasksSucceeded += 1;
+        stats.fetchedItems += items.length;
+
+        const ops = [];
+        const narrowQuery =
+          keywordPhrase.includes("Sadhguru") ||
+          keywordPhrase.includes("Isha") ||
+          keywordPhrase.includes("Jaggi") ||
+          keywordPhrase.includes("Adiyogi");
+
+        for (const item of items) {
+          const pubDateText = item?.pubDate ? String(item.pubDate) : "";
+          const articleDate = pubDateText ? new Date(pubDateText) : null;
+          if (!articleDate || Number.isNaN(articleDate.getTime())) continue;
+
+          const sourceText = normalizeItemSource(item);
+          if (isBlockedSource(sourceText)) continue;
+
+          const title = item?.title ? String(item.title) : "";
+          const link = item?.link ? String(item.link) : "";
+          if (!title || !link) continue;
+
+          if (!narrowQuery && !matchesTopic(title, sourceText)) continue;
+
+          if (!passesDateFilter(articleDate)) continue;
+
+          if (seenUrls.has(link)) {
+            stats.duplicateUrlsSkipped += 1;
+            continue;
+          }
+          seenUrls.add(link);
+
+          const pubMatch = findPublication(sourceText);
+          const publisherKey = normalizePublisherName(sourceText);
+          if (pubMatch) {
+            stats.enriched += 1;
+          } else if (sourceText) {
+            unknownPublishersSet.add(sourceText);
+          }
+
+          stats.acceptedItems += 1;
+          ops.push({
+            updateOne: {
+              filter: { url: link },
+              update: {
+                $setOnInsert: {
+                  title,
+                  source: sourceText || "Unknown",
+                  locale: locale.name,
+                  url: link,
+                  pubDate: articleDate,
+                  pubDateText,
+                },
+                $set: {
+                  publisherKey,
+                  country: pubMatch?.country || "",
+                  language: pubMatch?.language || "",
+                  category: pubMatch?.category || "",
+                },
+              },
+              upsert: true,
+            },
+          });
+        }
+
+        if (ops.length) {
+          const result = await Article.bulkWrite(ops, { ordered: false });
+          stats.upserted += result.upsertedCount ?? 0;
+        }
+      } catch (err) {
+        stats.fetchTasksFailed += 1;
+        // eslint-disable-next-line no-console
+        console.log(
+          `Skipped fetch: ${locale.name} / ${keywordPhrase}`,
+          err?.message || err,
+        );
+      }
+    },
+    FETCH_CONCURRENCY,
+  );
+
+  stats.localesSucceeded = locales.length;
+  stats.localesFailed = 0;
   stats.unknownPublishers = [...unknownPublishersSet].sort().slice(0, 100);
   stats.unknownPublishersTotal = unknownPublishersSet.size;
   stats.finishedAt = new Date().toISOString();
